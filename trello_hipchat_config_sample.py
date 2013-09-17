@@ -34,20 +34,31 @@ BOARD_BRAINSTORMING = "123456789123456789123456789123456789"
 ROOM_STAFF = "44444"
 ROOM_DESIGNERS = "55555"
 
+# What color do you want Trello notifications to be in HipChat?
+HIPCHAT_COLOR = "purple"
+
 # This is the main configuration section. For each board, specify which lists
 # you want to monitor, and which HipChat room send notifications to.
-# List names are specified with wildcars, so just use "*" to monitor all the lists.
+# List names are specified with wildcards, so just use "*" to monitor all the lists.
+# For a list of possible actions to include, see
+# https://trello.com/docs/api/board/index.html#get-1-boards-board-id-actions;
+# to include all actions, leave out the include_actions list.
 MONITOR = [
 	( BOARD_MAIN,
 		{
 			"list_names": [ "Current", "Done*" ],
 			"room_id": ROOM_STAFF,
+                        "include_actions": ["commentCard",
+                                            "addAttachmentToCard",
+                                            "updateCard",
+                                            "updateCheckItemStateOnCard"]
 		}
 	),
 	( BOARD_BRAINSTORMING,
 		{
 			"list_names": [ "*" ],
 			"room_id": ROOM_DESIGNERS,
+                        "include_actions": ["createCard"]
 		}
 	),
 ]

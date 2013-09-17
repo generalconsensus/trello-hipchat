@@ -1,4 +1,5 @@
-trello-hipchat.cfg
+trello_hipchat_config.py
 deploy.sh
 last-action.id
-
+*~
+*.pyc
