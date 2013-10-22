@@ -27,7 +27,7 @@ import os
 import time
 import cgi
 from trello_hipchat_config import MONITOR
-from messages import MESSAGES
+from .messages import MESSAGES
 from .util import (to_trello_date, from_trello_date, trunc, card_in_lists)
 from .api import trello, hipchat_msg as msg
 
