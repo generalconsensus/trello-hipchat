@@ -32,6 +32,7 @@ import cgi
 from trello_hipchat_config import (TRELLO_API_KEY, TRELLO_TOKEN,
                                    HIPCHAT_API_KEY, MONITOR, HIPCHAT_COLOR)
 from messages import MESSAGES
+from .util import to_trello_date, from_trello_date
 
 DEBUG = False
 ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -44,22 +45,6 @@ LAST_ID = 0
 LAST_TIME = time.time() - 20*60
 
 ESC = cgi.escape
-
-
-def to_trello_date(timestamp):
-    """
-    Take a timestamp (number of seconds since the epoch) and turn it into a
-    string in Trello's date format.
-    """
-    return time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(timestamp))
-
-
-def from_trello_date(string):
-    """
-    Take a string in Trello's date format and turn it into a timestamp (number
-    of seconds since the epoch).
-    """
-    return time.mktime(time.strptime(string, '%Y-%m-%dT%H:%M:%S.%fZ'))
 
 
 def trello(path, **kwargs):
