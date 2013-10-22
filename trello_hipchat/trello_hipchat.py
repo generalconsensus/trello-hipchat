@@ -25,11 +25,10 @@
 # For more information, please refer to <http://unlicense.org/>
 import os
 import time
-import fnmatch
 import cgi
 from trello_hipchat_config import MONITOR
 from messages import MESSAGES
-from .util import to_trello_date, from_trello_date
+from .util import (to_trello_date, from_trello_date, trunc, card_in_lists)
 from .api import trello, hipchat_msg as msg
 
 DEBUG = False
@@ -43,28 +42,6 @@ LAST_ID = 0
 LAST_TIME = time.time() - 20*60
 
 ESC = cgi.escape
-
-
-def trunc(string, maxlen=200):
-    """
-    If the string is longer than maxlen characters, return a truncated version,
-    otherwise return the string unchanged.
-    """
-    if len(string) >= maxlen:
-        string = string[:maxlen] + "[...]"
-    return string
-
-
-def card_in_lists(name, list_names):
-    """
-    Return True if name matches any of the list_names (which can be contain
-    some regular expression syntax (the same as what can be used in the Unix
-    shell)), otherwise False.
-    """
-    for filt in list_names:
-        if name == filt or fnmatch.fnmatch(name, filt):
-            return True
-    return False
 
 
 def notify(board_id, list_names, room_id, include_actions=["all"]):
