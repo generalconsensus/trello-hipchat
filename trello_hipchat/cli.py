@@ -150,10 +150,13 @@ def notify(board_id, list_names, room_id, include_actions=["all"]):
     LAST_ID = max(LAST_ID, long(A["id"], 16))
 
 
-if __name__ == "__main__":
+def main():
     while True:
         print 'starting another round\n\n\n'
         for (board_id, parameters) in MONITOR:
             notify(board_id, **parameters)
         time.sleep(60)
     open(ROOT_DIR + "/last-action.id", "w").write(hex(LAST_ID))
+
+if __name__ == "__main__":
+    main()
