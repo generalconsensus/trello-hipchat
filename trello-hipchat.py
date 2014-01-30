@@ -129,12 +129,18 @@ def notify(board_id, list_names, room_id):
                 continue        
             
             aname = ESC(A["data"]["attachment"]["name"])
-            aurl = A["data"]["attachment"]["url"]
-                    
-            m = "%s added an attachment to card <a href=\"%s\">%s</a>: <a href=\"%s\">%s</a>" % (author, card_url, card_name, aurl, aname)
+            try:
+                aurl = A["data"]["attachment"]["url"]
+                m = "%s added an attachment to card <a href=\"%s\">%s</a>: <a href=\"%s\">%s</a>" % (author, card_url, card_name, aurl, aname)
+            except KeyError:
+                aurl = None
+                m = ("%s added an attachment to card <a href=\"%s\">%s</a>: maybe?"
+                        % (author, card_url, card_name))
+
             msg(room_id, m)
-            if aurl.lower().endswith("png") or aurl.lower().endswith("gif") or aurl.lower().endswith("jpg") or aurl.lower().endswith("jpeg"):
-                msg(room_id, aurl, mtype="text")
+            if aurl is not None:
+                if aurl.lower().endswith("png") or aurl.lower().endswith("gif") or aurl.lower().endswith("jpg") or aurl.lower().endswith("jpeg"):
+                    msg(room_id, aurl, mtype="text")
 
         elif A["type"] == "updateCard":
             card_id_short = A["data"]["card"]["idShort"]
