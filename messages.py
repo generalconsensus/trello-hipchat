@@ -4,19 +4,42 @@
 # hyphen).  For example, updateCheckItemStateOnCard-uncheck.
 
 MESSAGES = {
-    'createCard': "%(author)s created card <a href=\"%(card_url)s\">%(card_name)s</a>.",
+    'addAttachmentToCard': "%(author)s added an attachment to card <a href=\"%(card_url)s\">%(card_name)s</a>: <a href=\"%(attachment_url)s\">%(attachment_name)s</a>.",
+
+    'addChecklistToCard': "%(author)s added checklist \"%(checklist_name)s\" to card <a href=\"%(card_url)s\">%(card_name)s</a>.",
+
+    'addMemberToCard': "%(author)s added %(member)s to card <a href=\"%(card_url)s\">%(card_name)s</a>.",
 
     'commentCard': "%(author)s commented on card <a href=\"%(card_url)s\">%(card_name)s</a>: %(text)s",
 
-    'addAttachmentToCard': "%(author)s added an attachment to card <a href=\"%(card_url)s\">%(card_name)s</a>: <a href=\"%(attachment_url)s\">%(attachment_name)s</a>",
+    'createCard': "%(author)s created card <a href=\"%(card_url)s\">%(card_name)s</a> in list \"%(list_name)s\".",
 
-    'updateCard': "%(author)s moved card <a href=\"%(card_url)s\">%(card_name)s</a> from list \"%(old_list)s\" to list \"%(new_list)s\"",
+    'createList': "%(author)s created list \"%(list_name)s\" on board <a href=\"%(board_url)s\">%(board_name)s</a>.",
 
-    'updateCheckItemStateOnCard-check': "%(author)s completed checklist item \"%(item_name)s\" in card <a href=\"%(card_url)s\">%(card_name)s</a>",
+    # Trello doesn't tell you the name of the card when you delete it.
+    'deleteCard': "%(author)s deleted a card from list \"%(list_name)s\".",
 
-    'updateCheckItemStateOnCard-uncheck': "%(author)s unchecked checklist item \"%(item_name)s\" in card <a href=\"%(card_url)s\">%(card_name)s</a>",
+    'moveCardFromBoard': "%(author)s moved card <a href=\"%(card_url)s\">%(card_name)s</a> from board <a href=\"%(board_url)s\">%(board_name)s</a> to board <a href=\"%(to_board_url)s\">%(to_board_name)s</a>.",
 
-    'updateChecklist-rename': "%(author)s renamed checklist on card <a href=\"%(card_url)s\">%(card_name)s</a> from \"%(old_name)s\" to \"%(new_name)s\"",
+    'moveCardToBoard': "%(author)s moved card <a href=\"%(card_url)s\">%(card_name)s</a> from board <a href=\"%(from_board_url)s\">%(from_board_name)s</a> to board <a href=\"%(board_url)s\">%(board_name)s</a>.",
 
-    'createList': "%(author)s created list \"%(list_name)s\" on board <a href=\"%(board_url)s\">%(board_name)s</a>"
-    }
+    'moveListFromBoard': "%(author)s moved list \"%(list_name)s\" from board <a href=\"%(board_url)s\">%(board_name)s</a> to board <a href=\"%(to_board_url)s\">%(to_board_name)s</a>.",
+
+    'moveListToBoard': "%(author)s moved list \"%(list_name)s\" from board <a href=\"%(from_board_url)s\">%(from_board_name)s</a> to board <a href=\"%(board_url)s\">%(board_name)s</a>.",
+
+    'removeChecklistFromCard': "%(author)s removed checklist \"%(checklist_name)s\" from card <a href=\"%(card_url)s\">%(card_name)s</a>.",
+
+    'removeMemberFromCard': "%(author)s removed %(member)s from card <a href=\"%(card_url)s\">%(card_name)s</a>.",
+
+    'updateCard-move': "%(author)s moved card <a href=\"%(card_url)s\">%(card_name)s</a> from list \"%(old_list)s\" to list \"%(new_list)s\".",
+
+    'updateCheckItemStateOnCard-check': "%(author)s completed checklist item \"%(item_name)s\" in card <a href=\"%(card_url)s\">%(card_name)s</a>.",
+
+    'updateCheckItemStateOnCard-uncheck': "%(author)s unchecked checklist item \"%(item_name)s\" in card <a href=\"%(card_url)s\">%(card_name)s</a>.",
+
+    'updateChecklist-rename': "%(author)s renamed checklist on card <a href=\"%(card_url)s\">%(card_name)s</a> from \"%(old_name)s\" to \"%(new_name)s\".",
+
+    'updateList-rename': "%(author)s renamed list \"%(old_name)s\" to \"%(list_name)s\" on board <a href=\"%(board_url)s\">%(board_name)s</a>.",
+
+    'default': "%(author)s did %(action_type)s.",
+}

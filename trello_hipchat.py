@@ -28,6 +28,7 @@ from __future__ import print_function
 import os
 import sys
 import time
+import calendar
 import json
 import fnmatch
 
@@ -48,10 +49,10 @@ DEBUG = True
 ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
 
 try:
-    PREV_ID = int(open(ROOT_DIR + '/last-action.id').read(), 16)
+    LAST_ID = int(open(ROOT_DIR + '/last-action.id').read())
 except IOError:
-    PREV_ID = 0
-LAST_ID = 0
+    LAST_ID = 0
+# Don't check back in time more than 20 minutes ago.
 LAST_TIME = time.time() - 20*60
 
 
@@ -68,7 +69,7 @@ def from_trello_date(string):
     Take a string in Trello's date format and turn it into a timestamp (number
     of seconds since the epoch).
     """
-    return time.mktime(time.strptime(string, '%Y-%m-%dT%H:%M:%S.%fZ'))
+    return calendar.timegm(time.strptime(string, '%Y-%m-%dT%H:%M:%S.%fZ'))
 
 
 def trello(path, **kwargs):
@@ -113,7 +114,7 @@ def trunc(string, maxlen=200):
     otherwise return the string unchanged.
     """
     if len(string) >= maxlen:
-        string = string[:maxlen] + '[...]'
+        string = string[:maxlen - 5] + '[...]'
     return string
 
 
@@ -140,8 +141,8 @@ def notify(board_id, list_names, room_id, include_actions=['all'], filters=[]):
     if DEBUG:
         print('getting actions since', since)
     actions = trello('/boards/%s/actions' % board_id,
-                     filter=','.join(include_actions))
-#                     since=since)
+                     filter=','.join(include_actions),
+                     since=since)
     if not actions:
         print('there are no actions!')
         return
@@ -154,7 +155,7 @@ def notify(board_id, list_names, room_id, include_actions=['all'], filters=[]):
             print('\n\n\n')
 
         # If this is older than the last one we already reported, ignore it.
-        if int(A['id'], 16) <= PREV_ID:
+        if int(A['id'], 16) <= LAST_ID:
             continue
 
         # If this doesn't pass the filters, ignore it.
@@ -166,12 +167,24 @@ def notify(board_id, list_names, room_id, include_actions=['all'], filters=[]):
 
         action_type = A['type']
 
-        params = {'author': escape(A['memberCreator']['fullName'])}
+        params = {'author': escape(A['memberCreator']['fullName']),
+                  'action_type': action_type}
 
-        if 'card' in A['data']:
+        # Basic info for applicable card/list/board
+
+        if 'card' in A['data'] and action_type != 'deleteCard':
             card_id = A['data']['card']['id']
             params['card_url'] = ('https://trello.com/c/%s/' % card_id)
             params['card_name'] = escape(A['data']['card']['name'])
+
+        if 'list' in A['data']:
+            params['list_name'] = escape(A['data']['list']['name'])
+
+        if 'board' in A['data']:
+            params['board_name'] = escape(A['data']['board']['name'])
+            params['board_url'] = 'https://trello.com/b/%s/' % board_id
+
+        # Specific action types
 
         if action_type == 'createCard':
             list_name = trello('/cards/%s/list' % card_id)['name']
@@ -182,7 +195,10 @@ def notify(board_id, list_names, room_id, include_actions=['all'], filters=[]):
             list_name = trello('/cards/%s/list' % card_id)['name']
             if not card_in_lists(list_name, list_names):
                 continue
-            params['text'] = trunc(' '.join(A['data']['text'].split())) 
+            params['text'] = trunc(' '.join(A['data']['text'].split()))
+
+        elif action_type in ('addMemberToCard', 'removeMemberFromCard'):
+            params['member'] = A['member']['fullName']
 
         elif action_type == 'addAttachmentToCard':
             list_name = trello('/cards/%s/list' % card_id)['name']
@@ -206,8 +222,21 @@ def notify(board_id, list_names, room_id, include_actions=['all'], filters=[]):
                     continue
                 params['old_list'] = escape(old_list_name)
                 params['new_list'] = escape(new_list_name)
+                action_type += '-move'
             else:
-                continue
+                # Some other type of card update, such as renaming(?) or archiving. (TODO)
+                action_type = 'default'
+
+        # TODO: probably want to check card_in_lists for these next two?
+        elif action_type in ('moveCardFromBoard', 'moveListFromBoard'):
+            params['to_board_url'] = ('https://trello.com/b/%s/' %
+                                      A['data']['boardTarget']['id'])
+            params['to_board_name'] = escape(A['data']['boardTarget']['name'])
+
+        elif action_type == ('moveCardToBoard', 'moveListToBoard'):
+            params['from_board_url'] = ('https://trello.com/b/%s/' %
+                                        A['data']['boardSource']['id'])
+            params['from_board_name'] = escape(A['data']['boardSource']['name'])
 
         elif action_type == 'updateCheckItemStateOnCard':
             list_name = trello('/cards/%s/list' % card_id)['name']
@@ -226,24 +255,43 @@ def notify(board_id, list_names, room_id, include_actions=['all'], filters=[]):
         elif action_type == 'updateChecklist':
             info = trello('/checklists/%s' % A['id'])
             card_info = trello('/cards/%s' % info['idCard'])
-            params['card_name'] = card_info['name']
+            params['card_name'] = escape(card_info['name'])
             params['card_url'] = card_info['url']
             if 'name' in A['data']['old']:
                 params['old_name'] = escape(A['data']['old']['name'])
                 params['new_name'] = escape(A['data']['checklist']['name'])
                 action_type += '-rename'
 
-        elif action_type == 'createList':
-            params['list_name'] = escape(A['data']['list']['name'])
-            params['board_name'] = escape(A['data']['board']['name'])
-            params['board_url'] = 'https://trello.com/b/%s/' % board_id
+        elif action_type in ('addChecklistToCard', 'removeChecklistFromCard'):
+            list_name = trello('/cards/%s/list' % card_id)['name']
+            if not card_in_lists(list_name, list_names):
+                continue
+            params['checklist_name'] = escape(A['data']['checklist']['name'])
+
+        elif action_type == 'updateList':
+            if not card_in_lists(A['data']['list']['name'], list_names):
+                # This is kind of a weird check to do ...
+                continue
+            if 'name' in A['data']['old']:
+                params['old_name'] = escape(A['data']['old']['name'])
+                action_type += '-rename'
+            else:
+                # Otherwise, the update was for some other aspect of the list
+                # than its name, e.g. its position (or archiving (TODO))
+                action_type = 'default'
+
+        elif action_type in ('createList', 'deleteCard'):
+            # We have a message template for this action type, but there are
+            # no additional parameters we need to get.
+            pass
 
         else:
             # This is an action that we haven't written a template for yet.
-            continue
+            action_type = 'default'
 
         msg(room_id, MESSAGES[action_type] % params)
 
+    # TODO: check that the whole LAST_ID logic is working correctly.
     LAST_ID = max(LAST_ID, int(A['id'], 16))
 
 
@@ -253,4 +301,4 @@ if __name__ == '__main__':
         for (board_id, parameters) in MONITOR:
             notify(board_id, **parameters)
         time.sleep(60)
-        open(ROOT_DIR + '/last-action.id', 'w').write(hex(LAST_ID))
+        open(ROOT_DIR + '/last-action.id', 'w').write(str(LAST_ID))
