@@ -169,10 +169,8 @@ def notify(board_id, list_names, room_id, include_actions=['all'], filters=[]):
         params = {'author': escape(A['memberCreator']['fullName'])}
 
         if 'card' in A['data']:
-            card_id_short = A['data']['card']['idShort']
             card_id = A['data']['card']['id']
-            params['card_url'] = ('https://trello.com/card/%s/%s/%s'
-                        % (card_id, board_id, card_id_short))
+            params['card_url'] = ('https://trello.com/c/%s/' % card_id)
             params['card_name'] = escape(A['data']['card']['name'])
 
         if action_type == 'createCard':
