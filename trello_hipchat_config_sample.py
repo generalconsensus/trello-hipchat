@@ -14,8 +14,8 @@ TRELLO_API_KEY = "fill-in-as-explained-above"
 # Go here, substituting the trello API key in the URL:
 # https://trello.com/1/authorize?response_type=token&key=[TRELLO_API_KEY]&scope=read&expiration=never&name=Trello-Hipchat
 #
-# If you don't need access to private boards, just comment/remove the following line.
-TRELLO_TOKEN = "fill-in-as-explained-above-or-delete-if-not-needed"
+# If you don't need access to private boards, set this to None.
+TRELLO_TOKEN = "fill-in-as-explained-above"
 
 # You need a HipChat API token. Go here to generate one:
 # https://[YOUR_GROUP].hipchat.com/admin/api
@@ -40,6 +40,8 @@ HIPCHAT_COLOR = "purple"
 # This is the main configuration section. For each board, specify which lists
 # you want to monitor, and which HipChat room send notifications to.
 # List names are specified with wildcards, so just use "*" to monitor all the lists.
+# Filters are functions that take an action dictionary and return True or False;
+# HipChat notifications will be sent only for cards that pass all filters.
 # For a list of possible actions to include, see
 # https://trello.com/docs/api/board/index.html#get-1-boards-board-id-actions;
 # to include all actions, leave out the include_actions list.

@@ -16,5 +16,7 @@ MESSAGES = {
 
     'updateCheckItemStateOnCard-uncheck': "%(author)s unchecked checklist item \"%(item_name)s\" in card <a href=\"%(card_url)s\">%(card_name)s</a>",
 
+    'updateChecklist-rename': "%(author)s renamed checklist on card <a href=\"%(card_url)s\">%(card_name)s</a> from \"%(old_name)s\" to \"%(new_name)s\"",
+
     'createList': "%(author)s created list \"%(list_name)s\" on board <a href=\"%(board_url)s\">%(board_name)s</a>"
     }
