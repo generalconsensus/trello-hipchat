@@ -120,7 +120,7 @@ def trunc(string, maxlen=200):
 
 def card_in_lists(name, list_names):
     """
-    Return True if name matches any of the list_names (which can be contain
+    Return True if name matches any of the list_names (which can contain
     some regular expression syntax (the same as what can be used in the Unix
     shell)), otherwise False.
     """
@@ -140,6 +140,8 @@ def notify(board_id, list_names, room_id, include_actions=['all'], filters=[]):
     since = to_trello_date(LAST_TIME)
     if DEBUG:
         print('getting actions since', since)
+    include_actions = [a[:a.index('-')] if '-' in a else a
+                       for a in include_actions]
     actions = trello('/boards/%s/actions' % board_id,
                      filter=','.join(include_actions),
                      since=since)
@@ -180,37 +182,57 @@ def notify(board_id, list_names, room_id, include_actions=['all'], filters=[]):
         if 'list' in A['data']:
             params['list_name'] = escape(A['data']['list']['name'])
 
+        if 'checklist' in A['data']:
+            params['checklist_name'] = escape(A['data']['checklist']['name'])
+            if action_type != 'removeChecklistFromCard':
+                # get card info
+                info = trello('/checklists/%s' % A['data']['checklist']['id'])
+                card_id = info['idCard']
+                card_info = trello('/cards/%s' % card_id)
+                params['card_url'] = card_info['url']
+                params['card_name'] = escape(card_info['name'])
+                # get list info
+                list_name = trello('/cards/%s/list' % card_id)['name']
+                params['list_name'] = escape(list_name)
+
         if 'board' in A['data']:
             params['board_name'] = escape(A['data']['board']['name'])
             params['board_url'] = 'https://trello.com/b/%s/' % board_id
 
-        # Specific action types
+        # If this action is in a list that's not relevant, ignore it
+        if 'list_name' in params and \
+           not card_in_lists(params['list_name'], list_names):
+            continue
 
-        if action_type == 'createCard':
-            list_name = trello('/cards/%s/list' % card_id)['name']
-            if not card_in_lists(list_name, list_names):
-                continue
+        # Construct message parameters for specific action types
 
-        elif action_type == 'commentCard':
-            list_name = trello('/cards/%s/list' % card_id)['name']
-            if not card_in_lists(list_name, list_names):
-                continue
+        if action_type == 'commentCard':
             params['text'] = trunc(' '.join(A['data']['text'].split()))
 
         elif action_type in ('addMemberToCard', 'removeMemberFromCard'):
             params['member'] = A['member']['fullName']
 
         elif action_type == 'addAttachmentToCard':
-            list_name = trello('/cards/%s/list' % card_id)['name']
-            if not card_in_lists(list_name, list_names):
-                continue        
-            
             params['attachment_name'] = escape(A['data']['attachment']['name'])
             params['attachment_url'] = A['data']['attachment']['url']
+            # TODO: send the attachment if it's an image?
+
+        elif action_type in ('updateCard', 'updateList', 'updateChecklist') \
+             and 'name' in A['data']['old']:
+            # Rename a card, list, or checklist
+            params['old_name'] = escape(A['data']['old']['name'])
+            action_type += '-rename'
+
+        elif action_type in ('updateCard', 'updateList') \
+             and 'closed' in A['data']['old']:
+            # Archive a card or list
+            if A['data']['old']['closed']:
+                action_type += '-unarchive'
+            else:
+                action_type += '-archive'
 
         elif action_type == 'updateCard':
-            if 'idList' in A['data']['old'] and \
-               'idList' in A['data']['card']:
+            if 'idList' in A['data']['old']:
                 # Move between lists
                 old_list_id = A['data']['old']['idList']
                 new_list_id = A['data']['card']['idList']
@@ -224,10 +246,9 @@ def notify(board_id, list_names, room_id, include_actions=['all'], filters=[]):
                 params['new_list'] = escape(new_list_name)
                 action_type += '-move'
             else:
-                # Some other type of card update, such as renaming(?) or archiving. (TODO)
-                action_type = 'default'
+                # Some other type of card update
+                params['attribute'] = list(A['data']['old'])[0]
 
-        # TODO: probably want to check card_in_lists for these next two?
         elif action_type in ('moveCardFromBoard', 'moveListFromBoard'):
             params['to_board_url'] = ('https://trello.com/b/%s/' %
                                       A['data']['boardTarget']['id'])
@@ -239,10 +260,6 @@ def notify(board_id, list_names, room_id, include_actions=['all'], filters=[]):
             params['from_board_name'] = escape(A['data']['boardSource']['name'])
 
         elif action_type == 'updateCheckItemStateOnCard':
-            list_name = trello('/cards/%s/list' % card_id)['name']
-            if not card_in_lists(list_name, list_names):
-                continue
-
             params['item_name'] = escape(A['data']['checkItem']['name'])
             # Why separate these into two different 'action types' rather than
             # putting it in the format string?  So that later we can change it
@@ -252,35 +269,11 @@ def notify(board_id, list_names, room_id, include_actions=['all'], filters=[]):
             else:
                 action_type += '-uncheck'
 
-        elif action_type == 'updateChecklist':
-            info = trello('/checklists/%s' % A['id'])
-            card_info = trello('/cards/%s' % info['idCard'])
-            params['card_name'] = escape(card_info['name'])
-            params['card_url'] = card_info['url']
-            if 'name' in A['data']['old']:
-                params['old_name'] = escape(A['data']['old']['name'])
-                params['new_name'] = escape(A['data']['checklist']['name'])
-                action_type += '-rename'
-
-        elif action_type in ('addChecklistToCard', 'removeChecklistFromCard'):
-            list_name = trello('/cards/%s/list' % card_id)['name']
-            if not card_in_lists(list_name, list_names):
-                continue
-            params['checklist_name'] = escape(A['data']['checklist']['name'])
-
         elif action_type == 'updateList':
-            if not card_in_lists(A['data']['list']['name'], list_names):
-                # This is kind of a weird check to do ...
-                continue
-            if 'name' in A['data']['old']:
-                params['old_name'] = escape(A['data']['old']['name'])
-                action_type += '-rename'
-            else:
-                # Otherwise, the update was for some other aspect of the list
-                # than its name, e.g. its position (or archiving (TODO))
-                action_type = 'default'
+            params['attribute'] = list(A['data']['old'])[0]
 
-        elif action_type in ('createList', 'deleteCard'):
+        elif action_type in ('createCard', 'deleteCard', 'createList',
+                             'addChecklistToCard', 'removeChecklistFromCard'):
             # We have a message template for this action type, but there are
             # no additional parameters we need to get.
             pass
