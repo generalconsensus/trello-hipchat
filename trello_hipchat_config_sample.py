@@ -46,21 +46,19 @@ HIPCHAT_COLOR = "purple"
 # https://trello.com/docs/api/board/index.html#get-1-boards-board-id-actions;
 # to include all actions, leave out the include_actions list.
 MONITOR = [
-	( BOARD_MAIN,
-		{
-			"list_names": [ "Current", "Done*" ],
-			"room_id": ROOM_STAFF,
-                        "include_actions": ["commentCard",
-                                            "addAttachmentToCard",
-                                            "updateCard",
-                                            "updateCheckItemStateOnCard"]
-		}
-	),
-	( BOARD_BRAINSTORMING,
-		{
-			"list_names": [ "*" ],
-			"room_id": ROOM_DESIGNERS,
-                        "include_actions": ["createCard"]
-		}
-	),
+    {
+        "board_id": BOARD_MAIN,
+        "room_id": ROOM_STAFF,
+        "list_names": [ "Current", "Done*" ],
+        "include_actions": ["commentCard",
+                            "addAttachmentToCard",
+                            "updateCard",
+                            "updateCheckItemStateOnCard"]
+    },
+    {
+        "board_id": BOARD_BRAINSTORMING,
+        "list_names": [ "*" ],
+        "room_id": ROOM_DESIGNERS,
+        "include_actions": ["createCard"]
+    }
 ]

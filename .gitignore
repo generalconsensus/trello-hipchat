@@ -3,3 +3,4 @@ deploy.sh
 last-action.id
 *~
 *.pyc
+*.egg-info

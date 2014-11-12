@@ -1,31 +1,5 @@
 #!/usr/bin/env python
-# This is free and unencumbered software released into the public domain.
-
-# Anyone is free to copy, modify, publish, use, compile, sell, or
-# distribute this software, either in source code form or as a compiled
-# binary, for any purpose, commercial or non-commercial, and by any
-# means.
-
-# In jurisdictions that recognize copyright laws, the author or authors
-# of this software dedicate any and all copyright interest in the
-# software to the public domain. We make this dedication for the benefit
-# of the public at large and to the detriment of our heirs and
-# successors. We intend this dedication to be an overt act of
-# relinquishment in perpetuity of all present and future rights to this
-# software under copyright law.
-
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-# IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
-# OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
-# ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-# OTHER DEALINGS IN THE SOFTWARE.
-
-# For more information, please refer to <http://unlicense.org/>
-
 from __future__ import print_function
-import os
 import sys
 import time
 import calendar
@@ -41,17 +15,10 @@ else:
     from cgi import escape as cgi_escape
     escape = lambda string: cgi_escape(string, quote=True)
 
-from trello_hipchat_config import (TRELLO_API_KEY, TRELLO_TOKEN,
-                                   HIPCHAT_API_KEY, MONITOR, HIPCHAT_COLOR)
-from messages import MESSAGES
+from .messages import MESSAGES
 
 DEBUG = True
-ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
 
-try:
-    LAST_ID = int(open(ROOT_DIR + '/last-action.id').read())
-except IOError:
-    LAST_ID = 0
 # Don't check back in time more than 20 minutes ago.
 LAST_TIME = time.time() - 20*60
 
@@ -72,13 +39,13 @@ def from_trello_date(string):
     return calendar.timegm(time.strptime(string, '%Y-%m-%dT%H:%M:%S.%fZ'))
 
 
-def trello(path, **kwargs):
+def trello(path, api_key, token=None, **kwargs):
     """
     Make a request to the Trello API.
     """
-    kwargs['key'] = TRELLO_API_KEY
-    if TRELLO_TOKEN:
-        kwargs['token'] = TRELLO_TOKEN
+    kwargs['key'] = api_key
+    if token:
+        kwargs['token'] = token
 
     url = 'https://api.trello.com/1' + path + '?' + urlencode(kwargs)
     req = urlopen(url)
@@ -86,7 +53,8 @@ def trello(path, **kwargs):
     return json.loads(data)
 
 
-def msg(room_id, message, mtype='html'):
+def send_hipchat_message(room_id, message, api_key,
+                         color='purple', mtype='html'):
     """
     Send a message to HipChat.
     """
@@ -99,12 +67,15 @@ def msg(room_id, message, mtype='html'):
         'from': 'Trello',
         'message': message.encode('utf-8'),
         'message_format': mtype,
-        'color': HIPCHAT_COLOR,
+        'color': color,
         'room_id': room_id
     }
 
     data = urlencode(data)
-    req = urlopen('https://api.hipchat.com/v1/rooms/message?format=json&auth_token=%s' % HIPCHAT_API_KEY, data)
+    req = urlopen(
+        'https://api.hipchat.com/v1/rooms/message?format=json&auth_token=%s'
+        % api_key, data
+    )
     req.read()
 
 
@@ -130,24 +101,26 @@ def card_in_lists(name, list_names):
     return False
 
 
-def notify(board_id, list_names, room_id, include_actions=['all'], filters=[]):
+def notify(config, last_action_id, board_id, room_id, list_names,
+           include_actions=['all'], filters=[]):
     """
     Look up the recent actions for the Trello board, and report all of the
     relevant ones to the HipChat room.
     """
-    global LAST_ID, LAST_TIME
+    global LAST_TIME
 
     since = to_trello_date(LAST_TIME)
     if DEBUG:
         print('getting actions since', since)
     include_actions = [a[:a.index('-')] if '-' in a else a
                        for a in include_actions]
-    actions = trello('/boards/%s/actions' % board_id,
-                     filter=','.join(include_actions),
-                     since=since)
-    if not actions:
-        print('there are no actions!')
-        return
+    actions = trello(
+        '/boards/%s/actions' % board_id,
+        filter=','.join(include_actions),
+        since=since,
+        api_key=config.TRELLO_API_KEY,
+        token=config.TRELLO_TOKEN
+    )
 
     # Iterate over the actions, in reverse order because of chronology.
     for A in reversed(actions):
@@ -157,7 +130,7 @@ def notify(board_id, list_names, room_id, include_actions=['all'], filters=[]):
             print('\n\n\n')
 
         # If this is older than the last one we already reported, ignore it.
-        if int(A['id'], 16) <= LAST_ID:
+        if int(A['id'], 16) <= last_action_id:
             continue
 
         # If this doesn't pass the filters, ignore it.
@@ -172,7 +145,7 @@ def notify(board_id, list_names, room_id, include_actions=['all'], filters=[]):
         params = {'author': escape(A['memberCreator']['fullName']),
                   'action_type': action_type}
 
-        # Basic info for applicable card/list/board
+        # Basic info for applicable card/list/checklist/board
 
         if 'card' in A['data'] and action_type != 'deleteCard':
             card_id = A['data']['card']['id']
@@ -186,14 +159,26 @@ def notify(board_id, list_names, room_id, include_actions=['all'], filters=[]):
             params['checklist_name'] = escape(A['data']['checklist']['name'])
             if action_type != 'removeChecklistFromCard':
                 # get card info
-                info = trello('/checklists/%s' % A['data']['checklist']['id'])
+                info = trello(
+                    '/checklists/%s' % A['data']['checklist']['id'],
+                    api_key=config.TRELLO_API_KEY,
+                    token=config.TRELLO_TOKEN
+                )
                 card_id = info['idCard']
-                card_info = trello('/cards/%s' % card_id)
+                card_info = trello(
+                    '/cards/%s' % card_id,
+                    api_key=config.TRELLO_API_KEY,
+                    token=config.TRELLO_TOKEN
+                )
                 params['card_url'] = card_info['url']
                 params['card_name'] = escape(card_info['name'])
                 # get list info
-                list_name = trello('/cards/%s/list' % card_id)['name']
-                params['list_name'] = escape(list_name)
+                list_info = trello(
+                    '/cards/%s/list' % card_id,
+                    api_key=config.TRELLO_API_KEY,
+                    token=config.TRELLO_TOKEN
+                )
+                params['list_name'] = escape(list_info['name'])
 
         if 'board' in A['data']:
             params['board_name'] = escape(A['data']['board']['name'])
@@ -207,7 +192,7 @@ def notify(board_id, list_names, room_id, include_actions=['all'], filters=[]):
         # Construct message parameters for specific action types
 
         if action_type == 'commentCard':
-            params['text'] = trunc(' '.join(A['data']['text'].split()))
+            params['text'] = trunc(escape(' '.join(A['data']['text'].split())))
 
         elif action_type in ('addMemberToCard', 'removeMemberFromCard'):
             params['member'] = A['member']['fullName']
@@ -234,10 +219,8 @@ def notify(board_id, list_names, room_id, include_actions=['all'], filters=[]):
         elif action_type == 'updateCard':
             if 'idList' in A['data']['old']:
                 # Move between lists
-                old_list_id = A['data']['old']['idList']
-                new_list_id = A['data']['card']['idList']
-                old_list_name = trello('/list/%s' % old_list_id)['name']
-                new_list_name = trello('/list/%s' % new_list_id)['name']
+                old_list_name = A['data']['listBefore']['name']
+                new_list_name = A['data']['listAfter']['name']
 
                 if not (card_in_lists(old_list_name, list_names) or
                         card_in_lists(new_list_name, list_names)):
@@ -245,6 +228,10 @@ def notify(board_id, list_names, room_id, include_actions=['all'], filters=[]):
                 params['old_list'] = escape(old_list_name)
                 params['new_list'] = escape(new_list_name)
                 action_type += '-move'
+            elif 'desc' in A['data']['old']:
+                action_type += '-description'
+                params['description'] = trunc(escape(
+                    ' '.join(A['data']['card']['desc'].split())))
             else:
                 # Some other type of card update
                 params['attribute'] = list(A['data']['old'])[0]
@@ -282,16 +269,10 @@ def notify(board_id, list_names, room_id, include_actions=['all'], filters=[]):
             # This is an action that we haven't written a template for yet.
             action_type = 'default'
 
-        msg(room_id, MESSAGES[action_type] % params)
+        send_hipchat_message(
+            room_id, MESSAGES[action_type] % params, config.HIPCHAT_API_KEY,
+            color=config.HIPCHAT_COLOR
+        )
 
     # TODO: check that the whole LAST_ID logic is working correctly.
-    LAST_ID = max(LAST_ID, int(A['id'], 16))
-
-
-if __name__ == '__main__':
-    while True:
-        print('starting another round\n\n\n')
-        for (board_id, parameters) in MONITOR:
-            notify(board_id, **parameters)
-        time.sleep(60)
-        open(ROOT_DIR + '/last-action.id', 'w').write(str(LAST_ID))
+    return max(last_action_id, int(A['id'], 16))
