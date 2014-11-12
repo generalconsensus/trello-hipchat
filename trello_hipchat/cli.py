@@ -25,6 +25,8 @@ def run_forever():
     parser = ArgumentParser()
     parser.add_argument('config_file', type=str,
                         help='Python file to load configuration from')
+    parser.add_argument('-i', type=int, dest='interval', default=60,
+                        help='Number of seconds to sleep between rounds')
     args = parser.parse_args()
 
     # Load config file
@@ -47,9 +49,10 @@ def run_forever():
         print('Unable to import file', args.config_file)
         sys.exit(1)
 
+    interval = max(0, args.interval)
     while True:
         print('starting another round\n\n\n')
         for parameters in config.MONITOR:
             LAST_ID = notify(config, LAST_ID, **parameters)
-        time.sleep(60)
+        time.sleep(interval)
         open(ROOT_DIR + '/last-action.id', 'w').write(str(LAST_ID))
