@@ -112,15 +112,18 @@ def notify(config, last_action_id, board_id, room_id, list_names,
     since = to_trello_date(LAST_TIME)
     if DEBUG:
         print('getting actions since', since)
-    include_actions = [a[:a.index('-')] if '-' in a else a
-                       for a in include_actions]
     actions = trello(
         '/boards/%s/actions' % board_id,
-        filter=','.join(include_actions),
+        filter=','.join([a[:a.index('-')] if '-' in a else a
+                         for a in include_actions]),
         since=since,
         api_key=config.TRELLO_API_KEY,
         token=config.TRELLO_TOKEN
     )
+
+    if not actions:
+        print('no actions!')
+        return last_action_id
 
     # Iterate over the actions, in reverse order because of chronology.
     for A in reversed(actions):
@@ -248,9 +251,6 @@ def notify(config, last_action_id, board_id, room_id, list_names,
 
         elif action_type == 'updateCheckItemStateOnCard':
             params['item_name'] = escape(A['data']['checkItem']['name'])
-            # Why separate these into two different 'action types' rather than
-            # putting it in the format string?  So that later we can change it
-            # to ignore unchecking if we want.
             if A['data']['checkItem']['state'] == 'complete':
                 action_type += '-check'
             else:
@@ -268,6 +268,13 @@ def notify(config, last_action_id, board_id, room_id, list_names,
         else:
             # This is an action that we haven't written a template for yet.
             action_type = 'default'
+
+        # check the action type again, because it might need to be excluded
+        # based on subtype
+        if (include_actions != ['all'] and
+            action_type != 'default' and
+            action_type not in include_actions):
+            continue
 
         send_hipchat_message(
             room_id, MESSAGES[action_type] % params, config.HIPCHAT_API_KEY,
