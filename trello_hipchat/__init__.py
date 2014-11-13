@@ -17,7 +17,6 @@ else:
 
 from .messages import MESSAGES
 
-DEBUG = True
 
 def to_trello_date(timestamp):
     """
@@ -50,13 +49,12 @@ def trello(path, api_key, token=None, **kwargs):
 
 
 def send_hipchat_message(room_id, message, api_key,
-                         color='purple', mtype='html'):
+                         color='purple', mtype='html', really=True):
     """
     Send a message to HipChat.
     """
-    if DEBUG:
-        print('message:', message.encode('utf-8'))
-        print('\n\n\n')
+    if not really:
+        print('message:', message.encode('utf-8'), '\n\n\n')
         return 
 
     data = {
@@ -104,8 +102,7 @@ def get_actions(config, last_time, board_id, include_actions=['all']):
     action time.
     """
     since = to_trello_date(last_time)
-    if DEBUG:
-        print('getting actions since', since)
+    print('getting actions since', since, 'for board', board_id)
     actions = trello(
         '/boards/%s/actions' % board_id,
         filter=','.join([a[:a.index('-')] if '-' in a else a
@@ -126,7 +123,7 @@ def get_actions(config, last_time, board_id, include_actions=['all']):
 
 
 def notify(config, actions, board_id, room_id, list_names,
-           include_actions=['all'], filters=[]):
+           include_actions=['all'], filters=[], debug=False):
     """
     Given a list of actions, report all of the relevant ones to the HipChat
     room.
@@ -134,9 +131,8 @@ def notify(config, actions, board_id, room_id, list_names,
     # Iterate over the actions, in reverse order because of chronology.
     for A in reversed(actions):
 
-        if DEBUG:
-            print(A)
-            print('\n\n\n')
+        if debug:
+            print(A, '\n\n\n')
 
         # If this doesn't pass the filters, ignore it.
         if not all(f(A) for f in filters):
@@ -276,5 +272,5 @@ def notify(config, actions, board_id, room_id, list_names,
 
         send_hipchat_message(
             room_id, MESSAGES[action_type] % params, config.HIPCHAT_API_KEY,
-            color=config.HIPCHAT_COLOR
+            color=config.HIPCHAT_COLOR, really=(not debug)
         )

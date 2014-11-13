@@ -26,6 +26,9 @@ def run_forever():
                         help='Directory in which to save/read state')
     parser.add_argument('-i', type=int, dest='interval', default=60,
                         help='Number of seconds to sleep between rounds')
+    parser.add_argument('--debug', action='store_true',
+                        help=('Print actions and messages, and don\'t actually'
+                              ' send to HipChat'))
     args = parser.parse_args()
 
     # Load config file
@@ -60,8 +63,6 @@ def run_forever():
         last_action_times = defaultdict(lambda: a_while_ago)
 
     while True:
-        print('starting another round\n\n\n')
-
         # First get all the actions, to avoid doing it multiple times for the
         # same board.
         new_actions = {}
@@ -76,7 +77,8 @@ def run_forever():
         # Then send all the HipChat notifications.
         for parameters in config.MONITOR:
             board_id = parameters['board_id']
-            notify(config, new_actions[board_id], **parameters)
+            notify(config, new_actions[board_id], debug=args.debug,
+                   **parameters)
 
         # Save state to a file.
         with open(state_file, 'w') as f:
