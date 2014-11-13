@@ -7,6 +7,11 @@ from collections import defaultdict
 from argparse import ArgumentParser
 from . import get_actions, notify
 
+# The error you get for a nonexistent file is different on py2 vs py3.
+if sys.version_info.major > 2:
+    FileNotFound = FileNotFoundError
+else:
+    FileNotFound = IOError
 
 def run_forever():
     """
@@ -17,6 +22,8 @@ def run_forever():
     parser = ArgumentParser()
     parser.add_argument('config_file', type=str,
                         help='Python file to load configuration from')
+    parser.add_argument('-d', type=str, dest='directory', default='.',
+                        help='Directory in which to save/read state')
     parser.add_argument('-i', type=int, dest='interval', default=60,
                         help='Number of seconds to sleep between rounds')
     args = parser.parse_args()
@@ -33,11 +40,7 @@ def run_forever():
                 config = imp.load_module('config', f, args.config_file,
                                          ('.py', 'r', imp.PY_SOURCE))
 
-    except (
-        IOError,            # File doesn't exist (py2)
-        FileNotFoundError,  # File doesn't exist (py3)
-        SyntaxError         # File isn't valid Python
-    ):
+    except (FileNotFound, SyntaxError):
         print('Unable to import file', args.config_file)
         sys.exit(1)
 
@@ -47,11 +50,11 @@ def run_forever():
 
     interval = max(0, args.interval)
 
-    # TODO: should this come from a command-line argument?
-    root_dir = os.path.abspath(os.path.dirname(__file__))
+    state_file = os.path.join(args.directory, 'last-actions.json')
     try:
-        last_action_times = json.load(open(root_dir + '/last-actions.json'))
-    except (IOError, FileNotFoundError, ValueError):
+        last_action_times = json.load(open(state_file))
+    except (FileNotFound, ValueError):
+        print('Warning: no saved state found.')
         # Don't check back in time more than 20 minutes ago.
         a_while_ago = time.time() - 20*60
         last_action_times = defaultdict(lambda: a_while_ago)
@@ -76,7 +79,7 @@ def run_forever():
             notify(config, new_actions[board_id], **parameters)
 
         # Save state to a file.
-        with open(root_dir + '/last-actions.json', 'w') as f:
+        with open(state_file, 'w') as f:
             json.dump(last_action_times, f)
 
         time.sleep(interval)
