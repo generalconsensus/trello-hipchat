@@ -39,7 +39,7 @@ MESSAGES = {
 
     'updateCard-move': "%(author)s moved card <a href=\"%(card_url)s\">%(card_name)s</a> from list \"%(old_list)s\" to list \"%(new_list)s\".",
 
-    'updateCard-rename': "%(author)s renamed card <a href=\"%(card_url)s\">%(card_name)s</a> from \"%(old_name)s\".",
+    'updateCard-rename': "%(author)s renamed card \"%(old_name)s\" to <a href=\"%(card_url)s\">%(card_name)s</a>.",
 
     'updateCard-unarchive': "%(author)s unarchived card <a href=\"%(card_url)s\">%(card_name)s</a>.",
 
