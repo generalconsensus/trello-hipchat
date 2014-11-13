@@ -1,6 +1,6 @@
 trello_hipchat_config.py
-deploy.sh
 last-action.id
+last-actions.json
 *~
 *.pyc
 *.egg-info

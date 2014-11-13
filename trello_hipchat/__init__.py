@@ -19,10 +19,6 @@ from .messages import MESSAGES
 
 DEBUG = True
 
-# Don't check back in time more than 20 minutes ago.
-LAST_TIME = time.time() - 20*60
-
-
 def to_trello_date(timestamp):
     """
     Take a timestamp (number of seconds since the epoch) and turn it into a
@@ -101,15 +97,13 @@ def card_in_lists(name, list_names):
     return False
 
 
-def notify(config, last_action_id, board_id, room_id, list_names,
-           include_actions=['all'], filters=[]):
+def get_actions(config, last_time, board_id, include_actions=['all']):
     """
-    Look up the recent actions for the Trello board, and report all of the
-    relevant ones to the HipChat room.
+    Get the list of actions from the Trello API, for a particular board.
+    Return the list of actions, the highest action ID, and the most recent
+    action time.
     """
-    global LAST_TIME
-
-    since = to_trello_date(LAST_TIME)
+    since = to_trello_date(last_time)
     if DEBUG:
         print('getting actions since', since)
     actions = trello(
@@ -121,10 +115,22 @@ def notify(config, last_action_id, board_id, room_id, list_names,
         token=config.TRELLO_TOKEN
     )
 
-    if not actions:
-        print('no actions!')
-        return last_action_id
+    # Ignore actions older than last_time
+    actions = [A for A in actions if from_trello_date(A['date']) > last_time]
 
+    # Compute the most recent time and action ID
+    new_last_time = max([from_trello_date(A['date']) for A in actions] +
+                        [last_time])
+
+    return (actions, new_last_time)
+
+
+def notify(config, actions, board_id, room_id, list_names,
+           include_actions=['all'], filters=[]):
+    """
+    Given a list of actions, report all of the relevant ones to the HipChat
+    room.
+    """
     # Iterate over the actions, in reverse order because of chronology.
     for A in reversed(actions):
 
@@ -132,16 +138,9 @@ def notify(config, last_action_id, board_id, room_id, list_names,
             print(A)
             print('\n\n\n')
 
-        # If this is older than the last one we already reported, ignore it.
-        if int(A['id'], 16) <= last_action_id:
-            continue
-
         # If this doesn't pass the filters, ignore it.
         if not all(f(A) for f in filters):
             continue
-
-        date = from_trello_date(A['date'])
-        LAST_TIME = max(LAST_TIME, date)
 
         action_type = A['type']
 
@@ -269,8 +268,7 @@ def notify(config, last_action_id, board_id, room_id, list_names,
             # This is an action that we haven't written a template for yet.
             action_type = 'default'
 
-        # check the action type again, because it might need to be excluded
-        # based on subtype
+        # Check the action type (at the end so it can check subtype)
         if (include_actions != ['all'] and
             action_type != 'default' and
             action_type not in include_actions):
@@ -280,6 +278,3 @@ def notify(config, last_action_id, board_id, room_id, list_names,
             room_id, MESSAGES[action_type] % params, config.HIPCHAT_API_KEY,
             color=config.HIPCHAT_COLOR
         )
-
-    # TODO: check that the whole LAST_ID logic is working correctly.
-    return max(last_action_id, int(A['id'], 16))

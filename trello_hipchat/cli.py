@@ -2,16 +2,10 @@ from __future__ import print_function
 import os
 import sys
 import time
+import json
+from collections import defaultdict
 from argparse import ArgumentParser
-from . import notify
-
-
-# TODO: should this come from a command-line argument?
-ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
-try:
-    LAST_ID = int(open(ROOT_DIR + '/last-action.id').read())
-except IOError:
-    LAST_ID = 0
+from . import get_actions, notify
 
 
 def run_forever():
@@ -19,8 +13,6 @@ def run_forever():
     Command-line interface.
     Every minute, send all the notifications for all the boards.
     """
-    global LAST_ID
-
     # Parse command-line args
     parser = ArgumentParser()
     parser.add_argument('config_file', type=str,
@@ -49,10 +41,42 @@ def run_forever():
         print('Unable to import file', args.config_file)
         sys.exit(1)
 
+    if not config.MONITOR:
+        print('Nothing to monitor!')
+        sys.exit(0)
+
     interval = max(0, args.interval)
+
+    # TODO: should this come from a command-line argument?
+    root_dir = os.path.abspath(os.path.dirname(__file__))
+    try:
+        last_action_times = json.load(open(root_dir + '/last-actions.json'))
+    except (IOError, FileNotFoundError, ValueError):
+        # Don't check back in time more than 20 minutes ago.
+        a_while_ago = time.time() - 20*60
+        last_action_times = defaultdict(lambda: a_while_ago)
+
     while True:
         print('starting another round\n\n\n')
+
+        # First get all the actions, to avoid doing it multiple times for the
+        # same board.
+        new_actions = {}
         for parameters in config.MONITOR:
-            LAST_ID = notify(config, LAST_ID, **parameters)
+            board_id = parameters['board_id']
+            if board_id not in new_actions:
+                (actions, new_last_time) = get_actions(
+                    config, last_action_times[board_id], board_id)
+                new_actions[board_id] = actions
+                last_action_times[board_id] = new_last_time
+
+        # Then send all the HipChat notifications.
+        for parameters in config.MONITOR:
+            board_id = parameters['board_id']
+            notify(config, new_actions[board_id], **parameters)
+
+        # Save state to a file.
+        with open(root_dir + '/last-actions.json', 'w') as f:
+            json.dump(last_action_times, f)
+
         time.sleep(interval)
-        open(ROOT_DIR + '/last-action.id', 'w').write(str(LAST_ID))
