@@ -59,13 +59,13 @@ def send_hipchat_message(room_id, message, api_key,
 
     data = {
         'from': 'Trello',
-        'message': message.encode('utf-8'),
+        'message': message,
         'message_format': mtype,
         'color': color,
         'room_id': room_id
     }
 
-    data = urlencode(data)
+    data = urlencode(data).encode('utf-8')
     req = urlopen(
         'https://api.hipchat.com/v1/rooms/message?format=json&auth_token=%s'
         % api_key, data
