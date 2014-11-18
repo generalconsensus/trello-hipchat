@@ -138,7 +138,7 @@ def notify(config, actions, board_id, room_id, list_names,
 
         # If we can already tell that this isn't an action type to include,
         # ignore it.
-        if not any(action_type==atype or action_type.startswith(atype+'-')
+        if not any(action_type==atype or atype.startswith(action_type+'-')
                    for atype in include_actions):
             continue
 
@@ -270,7 +270,7 @@ def notify(config, actions, board_id, room_id, list_names,
             # This is an action that we haven't written a template for yet.
             action_type = 'default'
 
-        # Check the action type again ( so it can check subtype)
+        # Check the action type again (so it can check subtype)
         if (include_actions != ['all'] and
             action_type != 'default' and
             action_type not in include_actions):
