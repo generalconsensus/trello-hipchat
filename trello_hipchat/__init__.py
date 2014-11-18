@@ -55,7 +55,7 @@ def send_hipchat_message(room_id, message, api_key,
     """
     if not really:
         print('message:', message.encode('utf-8'), '\n\n\n')
-        return 
+        return
 
     data = {
         'from': 'Trello',
@@ -134,11 +134,17 @@ def notify(config, actions, board_id, room_id, list_names,
         if debug:
             print(A, '\n\n\n')
 
+        action_type = A['type']
+
+        # If we can already tell that this isn't an action type to include,
+        # ignore it.
+        if not any(action_type==atype or action_type.startswith(atype+'-')
+                   for atype in include_actions):
+            continue
+
         # If this doesn't pass the filters, ignore it.
         if not all(f(A) for f in filters):
             continue
-
-        action_type = A['type']
 
         params = {'author': escape(A['memberCreator']['fullName']),
                   'action_type': action_type}
@@ -239,7 +245,7 @@ def notify(config, actions, board_id, room_id, list_names,
                                       A['data']['boardTarget']['id'])
             params['to_board_name'] = escape(A['data']['boardTarget']['name'])
 
-        elif action_type == ('moveCardToBoard', 'moveListToBoard'):
+        elif action_type in ('moveCardToBoard', 'moveListToBoard'):
             params['from_board_url'] = ('https://trello.com/b/%s/' %
                                         A['data']['boardSource']['id'])
             params['from_board_name'] = escape(A['data']['boardSource']['name'])
@@ -264,7 +270,7 @@ def notify(config, actions, board_id, room_id, list_names,
             # This is an action that we haven't written a template for yet.
             action_type = 'default'
 
-        # Check the action type (at the end so it can check subtype)
+        # Check the action type again ( so it can check subtype)
         if (include_actions != ['all'] and
             action_type != 'default' and
             action_type not in include_actions):

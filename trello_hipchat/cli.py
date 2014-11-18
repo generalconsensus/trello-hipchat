@@ -54,13 +54,13 @@ def run_forever():
     interval = max(0, args.interval)
 
     state_file = os.path.join(args.directory, 'last-actions.json')
+    # Don't check back in time more than 20 minutes ago.
+    a_while_ago = time.time() - 20*60
+    last_action_times = defaultdict(lambda: a_while_ago)
     try:
-        last_action_times = json.load(open(state_file))
+        last_action_times.update(json.load(open(state_file)))
     except (FileNotFound, ValueError):
         print('Warning: no saved state found.')
-        # Don't check back in time more than 20 minutes ago.
-        a_while_ago = time.time() - 20*60
-        last_action_times = defaultdict(lambda: a_while_ago)
 
     while True:
         # First get all the actions, to avoid doing it multiple times for the
