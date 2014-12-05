@@ -36,11 +36,11 @@ def run_forever():
     args = parser.parse_args()
 
     # Set up logging
-    logger = logging.getLogger(__name__)
-    logging.config.fileConfig(('logging_debug.cfg'
-                               if args.debug
-                               else 'logging.cfg'),
-                              disable_existing_loggers=False)
+    # logger = logging.getLogger(__name__)
+    # logging.config.fileConfig(('logging_debug.cfg'
+    #                            if args.debug
+    #                            else 'logging.cfg'),
+    #                           disable_existing_loggers=False)
     
     # Load config file
     try:
