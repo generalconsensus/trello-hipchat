@@ -37,12 +37,10 @@ def run_forever():
 
     # Set up logging
     logger = logging.getLogger(__name__)
-    if args.debug:
-        logging.config.fileConfig('logging_debug.cfg', 
-                                  disable_existing_loggers=False)
-    else:
-        logging.config.fileConfig('logging.cfg', 
-                                  disable_existing_loggers=False)
+    logging.config.fileConfig(('logging_debug.cfg'
+                               if args.debug
+                               else 'logging.cfg'),
+                              disable_existing_loggers=False)
     
     # Load config file
     try:
