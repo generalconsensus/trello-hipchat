@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-from __future__ import print_function
 import sys
 import time
 import calendar
@@ -17,6 +16,8 @@ else:
 
 from .messages import MESSAGES
 
+import logging
+logger = logging.getLogger(__name__)
 
 def to_trello_date(timestamp):
     """
@@ -54,7 +55,8 @@ def send_hipchat_message(room_id, message, api_key,
     Send a message to HipChat.
     """
     if not really:
-        print('message:', message.encode('utf-8'), '\n\n\n')
+        log_message = 'message:'+ message.encode('utf-8') + '\n\n\n'
+        logger.info(log_message)
         return
 
     data = {
@@ -102,7 +104,8 @@ def get_actions(config, last_time, board_id, include_actions=['all']):
     action time.
     """
     since = to_trello_date(last_time)
-    print('getting actions since', since, 'for board', board_id)
+    logger.info('getting actions since %s for board %s', since, board_id)
+    sys.stdout.flush()
     actions = trello(
         '/boards/%s/actions' % board_id,
         filter=','.join([a[:a.index('-')] if '-' in a else a
@@ -132,7 +135,7 @@ def notify(config, actions, board_id, room_id, list_names,
     for A in reversed(actions):
 
         if debug:
-            print(A, '\n\n\n')
+            logger.info('%s\n\n\n', A)
 
         action_type = A['type']
 

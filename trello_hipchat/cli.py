@@ -1,10 +1,16 @@
-from __future__ import print_function
 import os
 import sys
 import time
 import json
 from collections import defaultdict
 from argparse import ArgumentParser
+
+# Set up logging
+import logging
+import logging.config
+logging.config.fileConfig('logging.cfg', disable_existing_loggers=False)
+logger = logging.getLogger(__name__)
+
 from . import get_actions, notify
 
 # The error you get for a nonexistent file is different on py2 vs py3.
@@ -18,6 +24,7 @@ def run_forever():
     Command-line interface.
     Every minute, send all the notifications for all the boards.
     """
+        
     # Parse command-line args
     parser = ArgumentParser()
     parser.add_argument('config_file', type=str,
@@ -44,11 +51,11 @@ def run_forever():
                                          ('.py', 'r', imp.PY_SOURCE))
 
     except (FileNotFound, SyntaxError):
-        print('Unable to import file', args.config_file)
+        logger.error('Unable to import file %s', args.config_file)
         sys.exit(1)
 
     if not config.MONITOR:
-        print('Nothing to monitor!')
+        logger.error('Nothing to monitor!')
         sys.exit(0)
 
     interval = max(0, args.interval)
@@ -60,7 +67,7 @@ def run_forever():
     try:
         last_action_times.update(json.load(open(state_file)))
     except (FileNotFound, ValueError):
-        print('Warning: no saved state found.')
+        logger.warning('Warning: no saved state found.')
 
     while True:
         # First get all the actions, to avoid doing it multiple times for the
