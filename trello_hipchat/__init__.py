@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 import sys
 import time
 import calendar
@@ -16,8 +17,6 @@ else:
 
 from .messages import MESSAGES
 
-import logging
-logger = logging.getLogger(__name__)
 
 def to_trello_date(timestamp):
     """
@@ -49,14 +48,13 @@ def trello(path, api_key, token=None, **kwargs):
     return json.loads(data)
 
 
-def send_hipchat_message(room_id, message, api_key,
+def send_hipchat_message(room_id, message, api_key, logger,
                          color='purple', mtype='html', really=True):
     """
     Send a message to HipChat.
     """
     if not really:
-        log_message = 'message:'+ message.encode('utf-8') + '\n\n\n'
-        logger.info(log_message)
+        logger.debug('message: %s\n\n\n', message)
         return
 
     data = {
@@ -97,7 +95,7 @@ def card_in_lists(name, list_names):
     return False
 
 
-def get_actions(config, last_time, board_id, include_actions=['all']):
+def get_actions(config, last_time, board_id, logger, include_actions=['all']):
     """
     Get the list of actions from the Trello API, for a particular board.
     Return the list of actions, the highest action ID, and the most recent
@@ -125,18 +123,15 @@ def get_actions(config, last_time, board_id, include_actions=['all']):
     return (actions, new_last_time)
 
 
-def notify(config, actions, board_id, room_id, list_names,
-           include_actions=['all'], filters=[], debug=False):
+def notify(logger, config, actions, board_id, room_id, list_names,
+           debug=False, include_actions=['all'], filters=[]):
     """
     Given a list of actions, report all of the relevant ones to the HipChat
     room.
     """
     # Iterate over the actions, in reverse order because of chronology.
     for A in reversed(actions):
-
-        if debug:
-            logger.info('%s\n\n\n', A)
-
+        logger.debug('%s\n\n\n', A)
         action_type = A['type']
 
         # If we can already tell that this isn't an action type to include,
@@ -281,5 +276,5 @@ def notify(config, actions, board_id, room_id, list_names,
 
         send_hipchat_message(
             room_id, MESSAGES[action_type] % params, config.HIPCHAT_API_KEY,
-            color=config.HIPCHAT_COLOR, really=(not debug)
+            logger, color=config.HIPCHAT_COLOR, really=(not debug)
         )
