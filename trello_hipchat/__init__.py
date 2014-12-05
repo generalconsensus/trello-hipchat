@@ -17,6 +17,9 @@ else:
 
 from .messages import MESSAGES
 
+import logging
+logger = logging.getLogger(__name__)
+    
 
 def to_trello_date(timestamp):
     """
@@ -48,13 +51,13 @@ def trello(path, api_key, token=None, **kwargs):
     return json.loads(data)
 
 
-def send_hipchat_message(room_id, message, api_key,
-                         color='purple', mtype='html', really=True):
+def send_hipchat_message(room_id, message, api_key, color='purple', 
+                         mtype='html', really=True):
     """
     Send a message to HipChat.
     """
     if not really:
-        print('message:', message.encode('utf-8'), '\n\n\n')
+        logger.debug('message: %s\n\n\n', message)
         return
 
     data = {
@@ -102,7 +105,8 @@ def get_actions(config, last_time, board_id, include_actions=['all']):
     action time.
     """
     since = to_trello_date(last_time)
-    print('getting actions since', since, 'for board', board_id)
+    logger.info('getting actions since %s for board %s', since, board_id)
+    sys.stdout.flush()
     actions = trello(
         '/boards/%s/actions' % board_id,
         filter=','.join([a[:a.index('-')] if '-' in a else a
@@ -123,17 +127,14 @@ def get_actions(config, last_time, board_id, include_actions=['all']):
 
 
 def notify(config, actions, board_id, room_id, list_names,
-           include_actions=['all'], filters=[], debug=False):
+           debug=False, include_actions=['all'], filters=[]):
     """
     Given a list of actions, report all of the relevant ones to the HipChat
     room.
     """
     # Iterate over the actions, in reverse order because of chronology.
     for A in reversed(actions):
-
-        if debug:
-            print(A, '\n\n\n')
-
+        logger.debug('%s\n\n\n', A)
         action_type = A['type']
 
         # If we can already tell that this isn't an action type to include,
