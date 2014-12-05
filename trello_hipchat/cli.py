@@ -36,11 +36,13 @@ def run_forever():
     args = parser.parse_args()
 
     # Set up logging
-    logging.config.fileConfig('logging.cfg')
-    logger_name = __name__
+    logger = logging.getLogger(__name__)
     if args.debug:
-        logger_name = 'debug'
-    logger = logging.getLogger(logger_name)
+        logging.config.fileConfig('logging_debug.cfg', 
+                                  disable_existing_loggers=False)
+    else:
+        logging.config.fileConfig('logging.cfg', 
+                                  disable_existing_loggers=False)
     
     # Load config file
     try:
@@ -81,14 +83,14 @@ def run_forever():
             board_id = parameters['board_id']
             if board_id not in new_actions:
                 (actions, new_last_time) = get_actions(
-                    config, last_action_times[board_id], board_id, logger)
+                    config, last_action_times[board_id], board_id)
                 new_actions[board_id] = actions
                 last_action_times[board_id] = new_last_time
 
         # Then send all the HipChat notifications.
         for parameters in config.MONITOR:
             board_id = parameters['board_id']
-            notify(logger, config, new_actions[board_id], debug=args.debug,
+            notify(config, new_actions[board_id], debug=args.debug,
                    **parameters)
 
         # Save state to a file.

@@ -17,6 +17,9 @@ else:
 
 from .messages import MESSAGES
 
+import logging
+logger = logging.getLogger(__name__)
+    
 
 def to_trello_date(timestamp):
     """
@@ -48,8 +51,8 @@ def trello(path, api_key, token=None, **kwargs):
     return json.loads(data)
 
 
-def send_hipchat_message(room_id, message, api_key, logger,
-                         color='purple', mtype='html', really=True):
+def send_hipchat_message(room_id, message, api_key, color='purple', 
+                         mtype='html', really=True):
     """
     Send a message to HipChat.
     """
@@ -95,7 +98,7 @@ def card_in_lists(name, list_names):
     return False
 
 
-def get_actions(config, last_time, board_id, logger, include_actions=['all']):
+def get_actions(config, last_time, board_id, include_actions=['all']):
     """
     Get the list of actions from the Trello API, for a particular board.
     Return the list of actions, the highest action ID, and the most recent
@@ -123,7 +126,7 @@ def get_actions(config, last_time, board_id, logger, include_actions=['all']):
     return (actions, new_last_time)
 
 
-def notify(logger, config, actions, board_id, room_id, list_names,
+def notify(config, actions, board_id, room_id, list_names,
            debug=False, include_actions=['all'], filters=[]):
     """
     Given a list of actions, report all of the relevant ones to the HipChat
@@ -276,5 +279,5 @@ def notify(logger, config, actions, board_id, room_id, list_names,
 
         send_hipchat_message(
             room_id, MESSAGES[action_type] % params, config.HIPCHAT_API_KEY,
-            logger, color=config.HIPCHAT_COLOR, really=(not debug)
+            color=config.HIPCHAT_COLOR, really=(not debug)
         )
