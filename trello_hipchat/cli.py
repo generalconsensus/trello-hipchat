@@ -11,7 +11,7 @@ from argparse import ArgumentParser
 from . import get_actions, notify
 
 # The error you get for a nonexistent file is different on py2 vs py3.
-if sys.version_info.major > 2:
+if sys.version_info[0] > 2:
     FileNotFound = FileNotFoundError
 else:
     FileNotFound = IOError
@@ -44,7 +44,7 @@ def run_forever():
     
     # Load config file
     try:
-        if sys.version_info.major > 2:
+        if sys.version_info[0] > 2:
             import importlib
             config = importlib.machinery.SourceFileLoader(
                 'config', args.config_file).load_module()

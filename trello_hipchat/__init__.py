@@ -6,7 +6,7 @@ import calendar
 import json
 import fnmatch
 
-if sys.version_info.major > 2:
+if sys.version_info[0] > 2:
     from urllib.parse import urlencode
     from urllib.request import urlopen
     from html import escape
