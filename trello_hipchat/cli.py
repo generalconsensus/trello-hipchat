@@ -15,7 +15,8 @@ if sys.version_info[0] > 2:
     FileNotFound = FileNotFoundError
 else:
     FileNotFound = IOError
-
+    
+    
 def run_forever():
     """
     Command-line interface.
@@ -70,8 +71,6 @@ def run_forever():
         last_action_times.update(json.load(open(state_file)))
     except (FileNotFound, ValueError):
         print "Warning: no saved state found."
-        #logger.warning('Warning: no saved state found.')
-
     while True:
         # First get all the actions, to avoid doing it multiple times for the
         # same board.
