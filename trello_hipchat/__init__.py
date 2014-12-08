@@ -57,7 +57,6 @@ def send_hipchat_message(room_id, message, api_key, color='purple',
     Send a message to HipChat.
     """
     if not really:
-        print "message: "
         return
 
     data = {
