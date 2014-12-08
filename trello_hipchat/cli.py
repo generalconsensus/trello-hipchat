@@ -55,11 +55,11 @@ def run_forever():
                                          ('.py', 'r', imp.PY_SOURCE))
 
     except (FileNotFound, SyntaxError):
-        #logger.error('Unable to import file %s', args.config_file)
+        print "Unable to import file %s" args.config_file
         sys.exit(1)
 
     if not config.MONITOR:
-        #logger.error('Nothing to monitor!')
+        print "Nothing to monitor!"
         sys.exit(2)
 
     interval = max(0, args.interval)
@@ -71,6 +71,7 @@ def run_forever():
     try:
         last_action_times.update(json.load(open(state_file)))
     except (FileNotFound, ValueError):
+        print "Warning: no saved state found."
         #logger.warning('Warning: no saved state found.')
 
     while True:

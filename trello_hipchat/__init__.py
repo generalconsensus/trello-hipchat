@@ -57,7 +57,7 @@ def send_hipchat_message(room_id, message, api_key, color='purple',
     Send a message to HipChat.
     """
     if not really:
-        #logger.debug('message: %s\n\n\n', message)
+        print 'message: %s\n\n\n' message
         return
 
     data = {
@@ -105,7 +105,7 @@ def get_actions(config, last_time, board_id, include_actions=['all']):
     action time.
     """
     since = to_trello_date(last_time)
-    #logger.info('getting actions since %s for board %s', since, board_id)
+    print 'getting actions since %s for board %s'  since, board_id
     sys.stdout.flush()
     actions = trello(
         '/boards/%s/actions' % board_id,
@@ -134,7 +134,7 @@ def notify(config, actions, board_id, room_id, list_names,
     """
     # Iterate over the actions, in reverse order because of chronology.
     for A in reversed(actions):
-        #logger.debug('%s\n\n\n', A)
+        print '%s\n\n\n' A
         action_type = A['type']
 
         # If we can already tell that this isn't an action type to include,
