@@ -58,7 +58,6 @@ def run_forever():
         sys.exit(1)
 
     if not config.MONITOR:
-        print "Nothing to monitor!"
         sys.exit(2)
 
     interval = max(0, args.interval)

@@ -104,7 +104,6 @@ def get_actions(config, last_time, board_id, include_actions=['all']):
     action time.
     """
     since = to_trello_date(last_time)
-    print 'getting actions since %s for board %s'  since, board_id
     sys.stdout.flush()
     actions = trello(
         '/boards/%s/actions' % board_id,
@@ -133,7 +132,6 @@ def notify(config, actions, board_id, room_id, list_names,
     """
     # Iterate over the actions, in reverse order because of chronology.
     for A in reversed(actions):
-        print '%s\n\n\n' A
         action_type = A['type']
 
         # If we can already tell that this isn't an action type to include,
