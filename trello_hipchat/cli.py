@@ -55,7 +55,7 @@ def run_forever():
                                          ('.py', 'r', imp.PY_SOURCE))
 
     except (FileNotFound, SyntaxError):
-        print "Unable to import file %s" args.config_file
+        print "Unable to import file" 
         sys.exit(1)
 
     if not config.MONITOR:
